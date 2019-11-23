@@ -1,0 +1,12 @@
+C:\Users\Henrik\source\repos\IMWJQ-Client\IMWJQ-Client\bin\Debug\IMWJQ-Client.exe.config
+C:\Users\Henrik\source\repos\IMWJQ-Client\IMWJQ-Client\bin\Debug\IMWJQ-Client.exe
+C:\Users\Henrik\source\repos\IMWJQ-Client\IMWJQ-Client\bin\Debug\IMWJQ-Client.pdb
+C:\Users\Henrik\source\repos\IMWJQ-Client\IMWJQ-Client\bin\Debug\IMWJQ-Client.xml
+C:\Users\Henrik\source\repos\IMWJQ-Client\IMWJQ-Client\obj\Debug\IMWJQ-Client.vbprojAssemblyReference.cache
+C:\Users\Henrik\source\repos\IMWJQ-Client\IMWJQ-Client\obj\Debug\IMWJQ_Client.Resources.resources
+C:\Users\Henrik\source\repos\IMWJQ-Client\IMWJQ-Client\obj\Debug\IMWJQ-Client.vbproj.GenerateResource.cache
+C:\Users\Henrik\source\repos\IMWJQ-Client\IMWJQ-Client\obj\Debug\IMWJQ-Client.vbproj.CoreCompileInputs.cache
+C:\Users\Henrik\source\repos\IMWJQ-Client\IMWJQ-Client\obj\Debug\IMWJQ-Client.exe
+C:\Users\Henrik\source\repos\IMWJQ-Client\IMWJQ-Client\obj\Debug\IMWJQ-Client.xml
+C:\Users\Henrik\source\repos\IMWJQ-Client\IMWJQ-Client\obj\Debug\IMWJQ-Client.pdb
+C:\Users\Henrik\source\repos\IMWJQ-Client\IMWJQ-Client\obj\Debug\IMWJQ_Client.frmmain.resources
