@@ -22,8 +22,10 @@ Partial Class frmmain
     'Das Bearbeiten mit dem Code-Editor ist nicht möglich.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
+        Me.components = New System.ComponentModel.Container()
         Me.TaskWatcher = New System.IO.FileSystemWatcher()
         Me.ClientWatcher = New System.IO.FileSystemWatcher()
+        Me.Timer = New System.Windows.Forms.Timer(Me.components)
         CType(Me.TaskWatcher, System.ComponentModel.ISupportInitialize).BeginInit()
         CType(Me.ClientWatcher, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
@@ -40,6 +42,10 @@ Partial Class frmmain
         Me.ClientWatcher.EnableRaisingEvents = True
         Me.ClientWatcher.SynchronizingObject = Me
         '
+        'Timer
+        '
+        Me.Timer.Interval = 60000
+        '
         'frmmain
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
@@ -55,4 +61,5 @@ Partial Class frmmain
 
     Friend WithEvents TaskWatcher As IO.FileSystemWatcher
     Friend WithEvents ClientWatcher As IO.FileSystemWatcher
+    Friend WithEvents Timer As Windows.Forms.Timer
 End Class
