@@ -1,4 +1,6 @@
-﻿Public Class frmmain
+﻿Imports System.ComponentModel
+
+Public Class frmmain
     Private Clients As List(Of Client)
     Private Jobs As List(Of Job)
     Private MaxID As ULong
@@ -35,12 +37,8 @@
     End Enum
 
     Private Sub frmmain_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        Clients = LoadClients()
+        lblJobDir.Text = My.Settings.JobDir
         Jobs = New List(Of Job)
-        CrawlJobFolder()
-        TaskWatcher.Path = My.Application.Info.DirectoryPath & "\input"
-        ClientWatcher.Path = My.Application.Info.DirectoryPath & "\Clients"
-        AssigneJobs()
     End Sub
 
     Private Sub AssigneJobs()
@@ -53,7 +51,7 @@
                         Job.Client.Clear()
                         Job.Client.Add(Client.Name)
                         Job.StartTime = Now
-                        WriteTask(My.Application.Info.DirectoryPath & "\Clients\" & Client.Name & ".txt", Job)
+                        WriteTask(My.Settings.JobDir & "\Clients\" & Client.Name & ".txt", Job)
                     End If
                 Next
             End If
@@ -68,7 +66,7 @@
                         Job.Client.Clear()
                         Job.Client.Add(Client.Name)
                         Job.StartTime = Now
-                        WriteTask(My.Application.Info.DirectoryPath & "\Clients\" & Client.Name & ".txt", Job)
+                        WriteTask(My.Settings.JobDir & "\Clients\" & Client.Name & ".txt", Job)
                     End If
                 Next
             End If
@@ -85,8 +83,8 @@
     Private Sub WrtieOutputs()
         Dim writer As System.IO.StreamWriter
         Dim clinetsstr As String
-        writer = New IO.StreamWriter(My.Application.Info.DirectoryPath & "Warteliste.csv")
-        writer.WriteLine("Software;Argrumente;Verantwortlicher;Timeout;Client")
+        writer = New IO.StreamWriter(My.Settings.JobDir & "\Waiting.csv")
+        writer.WriteLine("Software;Argrument;User;Timeout;Client")
         For Each job In Jobs 'Create waiting list
             If job.Status = JobStatus.Waiting Then
                 clinetsstr = ""
@@ -98,20 +96,20 @@
             End If
         Next job
         writer.Close()
-        writer = New IO.StreamWriter(My.Application.Info.DirectoryPath & "In Arbeit.csv")
-        writer.WriteLine("Software;Argrumente;Verantwortlicher;Timeout;Client;Startzeit")
+        writer = New IO.StreamWriter(My.Application.Info.DirectoryPath & "In work.csv")
+        writer.WriteLine("Software;Argrument;User;Timeout;Client;Start time")
         For Each job In Jobs 'Create working list
             If job.Status = JobStatus.Working Then
                 writer.WriteLine(job.Software & ";" & job.Ags & ";" & job.Owner & ";" & job.Timeout & ";" & job.Client.First & ";" & job.StartTime.ToShortTimeString)
             End If
         Next
         writer.Close()
-        If System.IO.File.Exists(My.Application.Info.DirectoryPath & "Abgeschlossen.csv") = False Then
-            writer = New IO.StreamWriter(My.Application.Info.DirectoryPath & "Abgeschlossen.csv")
-            writer.WriteLine("Software;Argrumente;Verantwortlicher;Timeout;Client;Startzeit")
+        If System.IO.File.Exists(My.Application.Info.DirectoryPath & "Done.csv") = False Then
+            writer = New IO.StreamWriter(My.Application.Info.DirectoryPath & "Done.csv")
+            writer.WriteLine("Software;Argrument;User;Timeout;Client;Start time")
             writer.Close()
         End If
-        writer = New IO.StreamWriter(My.Application.Info.DirectoryPath & "Abgeschlossen.csv", True)
+        writer = New IO.StreamWriter(My.Application.Info.DirectoryPath & "Done.csv", True)
         For Each job In Jobs 'Create working list
             If job.Status = JobStatus.Finished Then
                 writer.WriteLine(job.Software & ";" & job.Ags & ";" & job.Owner & ";" & job.Timeout & ";" & job.Client.First & ";" & job.StartTime.ToShortTimeString)
@@ -124,7 +122,7 @@
         For Each Client In Clients
             Dim eJob As Job
             Dim findex As Integer
-            If System.IO.File.Exists(My.Application.Info.DirectoryPath & "\Clients\" & Client.Name & ".txt") = False And Client.Status = ClientStatus.Busy Then
+            If System.IO.File.Exists(My.Settings.JobDir & "\Clients\" & Client.Name & ".txt") = False And Client.Status = ClientStatus.Busy Then
                 'Check for finished jobs
                 Client.Status = ClientStatus.Free
                 findex = Jobs.FindIndex(Function(p) p.ID = Client.Job.ID)
@@ -138,7 +136,7 @@
 
     Private Sub CrawlJobFolder()
         Dim JobFiles() As String
-        JobFiles = System.IO.Directory.GetFiles(My.Application.Info.DirectoryPath & "\input")
+        JobFiles = System.IO.Directory.GetFiles(My.Settings.JobDir & "\Input")
         Dim i As Integer
         For i = 0 To UBound(JobFiles)
             If JobFiles(i).Substring(JobFiles(i).LastIndexOf(".")) = ".csv" Then
@@ -149,9 +147,10 @@
     End Sub
 
     Private Function LoadClients() As List(Of Client)
+        'Loads the client list 
         Dim res As New List(Of Client)
         Using MyReader As New Microsoft.VisualBasic.FileIO.
-        TextFieldParser(My.Application.Info.DirectoryPath & "\Clients.csv")
+        TextFieldParser(My.Settings.JobDir & "\Clients.csv")
             MyReader.TextFieldType = Microsoft.VisualBasic.FileIO.FieldType.Delimited
             MyReader.Delimiters = New String() {";"}
             Dim currentRow As String()
@@ -204,12 +203,16 @@
     End Function
 
     Private Sub TaskWatcher_Changed(sender As Object, e As IO.FileSystemEventArgs) Handles TaskWatcher.Changed
-        CrawlJobFolder()
-        AssigneJobs()
+        If chkRun.Checked Then
+            CrawlJobFolder()
+            AssigneJobs()
+        End If
     End Sub
 
     Private Sub ClientWatcher_Changed(sender As Object, e As IO.FileSystemEventArgs) Handles ClientWatcher.Changed
-        CheckClients()
+        If chkRun.Checked Then
+            CheckClients()
+        End If
     End Sub
 
     Private Sub Timer_Tick(sender As Object, e As EventArgs) Handles Timer.Tick
@@ -223,16 +226,49 @@
                 fjob = Jobs.Item(findex)
                 fjob.Status = JobStatus.Failed
                 Jobs.Item(findex) = fjob
-                If System.IO.File.Exists(My.Application.Info.DirectoryPath & "Fehlgeschlagen.csv") = False Then
-                    writer = New IO.StreamWriter(My.Application.Info.DirectoryPath & "Abgeschlossen.csv")
-                    writer.WriteLine("Software;Argrumente;Verantwortlicher;Timeout;Client;Startzeit")
+                If System.IO.File.Exists(My.Settings.JobDir & "\Failed.csv") = False Then
+                    writer = New IO.StreamWriter(My.Settings.JobDir & "\Done.csv")
+                    writer.WriteLine("Software;Argument;User;Timeout;Client;Start time")
                     writer.Close()
                 End If
-                writer = New IO.StreamWriter(My.Application.Info.DirectoryPath & "Abgeschlossen.csv", True)
+                writer = New IO.StreamWriter(My.Settings.JobDir & "\Done.csv", True)
                 writer.WriteLine(client.Job.Software & ";" & client.Job.Ags & ";" & client.Job.Owner & ";" & client.Job.Timeout & ";" & client.Name & ";" & client.Job.StartTime)
                 writer.Close()
                 client.Job = Nothing
             End If
         Next
+    End Sub
+
+    Private Sub btnSelJobDir_Click(sender As Object, e As EventArgs) Handles btnSelJobDir.Click
+        FolderBrowserDialog.SelectedPath = My.Settings.JobDir
+        If FolderBrowserDialog.ShowDialog() = Windows.Forms.DialogResult.OK Then
+            My.Settings.Item("JobDir") = FolderBrowserDialog.SelectedPath
+            lblJobDir.Text = My.Settings.JobDir
+        End If
+    End Sub
+
+    Private Sub frmmain_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
+        My.Settings.Save()
+    End Sub
+
+    Private Sub chkRun_CheckedChanged(sender As Object, e As EventArgs) Handles chkRun.CheckedChanged
+        If chkRun.Checked = True Then
+            If System.IO.Directory.Exists(My.Settings.JobDir) = False Then
+                chkRun.Checked = False
+                MsgBox("The set working directory does not exist", vbCritical)
+                Exit Sub
+            End If
+            If System.IO.Directory.Exists(My.Settings.JobDir & "\Input") = False Then
+                System.IO.Directory.CreateDirectory(My.Settings.JobDir & "\Input")
+            End If
+            If System.IO.Directory.Exists(My.Settings.JobDir & "\Clients") = False Then
+                System.IO.Directory.CreateDirectory(My.Settings.JobDir & "\Clients")
+            End If
+            TaskWatcher.Path = My.Settings.JobDir & "\Input"
+            ClientWatcher.Path = My.Settings.JobDir & "\Clients"
+                CrawlJobFolder()
+                AssigneJobs()
+            End If
+            Timer.Enabled = chkRun.Checked
     End Sub
 End Class
