@@ -7,7 +7,7 @@ Public Class frmmain
 
     Private Structure Job
         Dim Software As String
-        Dim Ags As String
+        Dim Args As String
         Dim Owner As String
         Dim Timeout As Integer
         Dim Client As List(Of String)
@@ -28,6 +28,7 @@ Public Class frmmain
         Dim Software As List(Of String)
         Dim Status As ClientStatus
         Dim Job As Job
+        Dim Background As Boolean
     End Structure
 
     Private Enum ClientStatus
@@ -39,9 +40,10 @@ Public Class frmmain
     Private Sub frmmain_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         lblJobDir.Text = My.Settings.JobDir
         Jobs = New List(Of Job)
+        Clients = New List(Of Client)
     End Sub
 
-    Private Sub AssigneJobs()
+    Private Sub AssigneJobs() 'ToDo: Overhaul
         For Each Job In Jobs 'Look For machine specific jobs
             If Job.Status = JobStatus.Waiting And Job.Client.Count > 0 Then
                 For Each Client In Clients
@@ -74,13 +76,13 @@ Public Class frmmain
         WrtieOutputs()
     End Sub
 
-    Private Sub WriteTask(Path As String, Job As Job)
+    Private Sub WriteTask(Path As String, Job As Job) 'ToDo: Overhaul
         Dim writer As New System.IO.StreamWriter(Path)
-        writer.WriteLine(Job.Software & ";" & Job.Ags)
+        writer.WriteLine(Job.Software & ";" & Job.Args)
         writer.Close()
     End Sub
 
-    Private Sub WrtieOutputs()
+    Private Sub WrtieOutputs() 'ToDo: Overhaul
         Dim writer As System.IO.StreamWriter
         Dim clinetsstr As String
         writer = New IO.StreamWriter(My.Settings.JobDir & "\Waiting.csv")
@@ -92,7 +94,7 @@ Public Class frmmain
                     clinetsstr = clinetsstr & "," & client
                 Next
                 clinetsstr = clinetsstr.Substring(1)
-                writer.WriteLine(job.Software & ";" & job.Ags & ";" & job.Owner & ";" & job.Timeout & ";" & clinetsstr)
+                writer.WriteLine(job.Software & ";" & job.Args & ";" & job.Owner & ";" & job.Timeout & ";" & clinetsstr)
             End If
         Next job
         writer.Close()
@@ -100,7 +102,7 @@ Public Class frmmain
         writer.WriteLine("Software;Argrument;User;Timeout;Client;Start time")
         For Each job In Jobs 'Create working list
             If job.Status = JobStatus.Working Then
-                writer.WriteLine(job.Software & ";" & job.Ags & ";" & job.Owner & ";" & job.Timeout & ";" & job.Client.First & ";" & job.StartTime.ToShortTimeString)
+                writer.WriteLine(job.Software & ";" & job.Args & ";" & job.Owner & ";" & job.Timeout & ";" & job.Client.First & ";" & job.StartTime.ToShortTimeString)
             End If
         Next
         writer.Close()
@@ -112,13 +114,13 @@ Public Class frmmain
         writer = New IO.StreamWriter(My.Application.Info.DirectoryPath & "Done.csv", True)
         For Each job In Jobs 'Create working list
             If job.Status = JobStatus.Finished Then
-                writer.WriteLine(job.Software & ";" & job.Ags & ";" & job.Owner & ";" & job.Timeout & ";" & job.Client.First & ";" & job.StartTime.ToShortTimeString)
+                writer.WriteLine(job.Software & ";" & job.Args & ";" & job.Owner & ";" & job.Timeout & ";" & job.Client.First & ";" & job.StartTime.ToShortTimeString)
             End If
         Next
         writer.Close()
     End Sub
 
-    Private Sub CheckClients()
+    Private Sub CheckClients() 'ToDo: Overhaul
         For Each Client In Clients
             Dim eJob As Job
             Dim findex As Integer
@@ -135,24 +137,118 @@ Public Class frmmain
     End Sub
 
     Private Sub CrawlJobFolder()
-        Dim JobFiles() As String
-        JobFiles = System.IO.Directory.GetFiles(My.Settings.JobDir & "\Input")
+        Dim JobDirs() As String
+        JobDirs = System.IO.Directory.GetDirectories(My.Settings.JobDir & "\Jobs")
         Dim i As Integer
-        For i = 0 To UBound(JobFiles)
-            If JobFiles(i).Substring(JobFiles(i).LastIndexOf(".")) = ".csv" Then
-                Jobs.AddRange(LoadJobs(JobFiles(i)))
-                System.IO.File.Delete(JobFiles(i))
+
+        For i = 0 To UBound(JobDirs)
+            If Not System.IO.File.Exists(JobDirs(i) & "\Job.txt") Then Continue For
+            Dim Reader As New System.IO.StreamReader(JobDirs(i) & "\Job.txt")
+            Dim line As String
+            Dim nJob As New Job
+            nJob.Software = ""
+            nJob.Args = ""
+            nJob.Software = ""
+            nJob.Client = New List(Of String)
+            nJob.ID = Nothing
+            nJob.Status = JobStatus.Waiting
+            nJob.Timeout = 0
+            Do While Not Reader.EndOfStream
+
+                line = Reader.ReadLine
+                If line.EndsWith("=") Or Not line.Contains("=") Then Continue Do
+                Select Case LCase(line.Substring(0, line.IndexOf("=")))
+                    Case "software"
+                        nJob.Software = line.Substring(line.IndexOf("=") + 1)
+                    Case "user"
+                        nJob.Owner = line.Substring(line.IndexOf("=") + 1)
+                    Case "args"
+                        nJob.Args = line.Substring(line.IndexOf("=") + 1)
+                    Case "client"
+                        Dim csplit() As String
+                        csplit = line.Substring(line.IndexOf("=") + 1).Split(",")
+                        For Each item In csplit
+                            nJob.Client.Add(item)
+                        Next
+                    Case "id"
+                        nJob.ID = CULng(line.Substring(line.IndexOf("=") + 1))
+                    Case "timeout"
+                        nJob.Timeout = CInt(line.Substring(line.IndexOf("=") + 1))
+                End Select
+            Loop
+            Reader.Close()
+
+            If nJob.ID = 0 Then
+                'Job is new
+                MaxID = MaxID + 1
+                nJob.ID = MaxID
+
+                Try
+                    SetJobID(JobDirs(i) & "\Job.txt", nJob.ID)
+                Catch
+                    Continue For
+                End Try
+            Else
+                'Job already exists
+                Dim oJobIndex As Integer = Jobs.FindIndex(Function(x) x.ID = nJob.ID)
+                If oJobIndex = -1 Then
+                    MaxID = MaxID + 1
+                    nJob.ID = MaxID
+                    'Job has ID but is not found in list
+                    Try
+                        SetJobID(JobDirs(i) & "\Job.txt", nJob.ID)
+                    Catch
+                        Continue For
+                    End Try
+                Else
+                    If Jobs(oJobIndex).Status = JobStatus.Waiting Then
+                        Jobs(oJobIndex) = nJob
+                    End If
+                    If Jobs(oJobIndex).Status = JobStatus.Failed Then
+                        nJob.Status = JobStatus.Waiting
+                        Jobs(oJobIndex) = nJob
+                    End If
+                End If
             End If
+
         Next i
     End Sub
 
-    Private Function LoadClients() As List(Of Client)
-        'Loads the client list 
+    Private Sub SetJobID(Path As String, ID As ULong)
+        Dim Reader As New System.IO.StreamReader(Path)
+        Dim File As New List(Of String)
+        Dim Line As String
+        Do While Not Reader.EndOfStream
+            Line = Reader.ReadLine
+            If Not Line.Contains("ID") Then
+                File.Add(Line)
+            End If
+        Loop
+        Reader.Close()
+
+        Dim Writer As New System.IO.StreamWriter(Path)
+        For Each L In File
+            Writer.Write(L)
+            Writer.WriteLine()
+        Next
+        Writer.Write("ID=" & CStr(ID))
+        Writer.Close()
+    End Sub
+
+    Private Function LoadClients(oldList As List(Of Client)) As List(Of Client)
+        'Loads the client list
         Dim res As New List(Of Client)
+        Dim fi As New System.IO.FileInfo(My.Settings.JobDir & "\Clients.csv")
+        Dim l As Integer
+        l = fi.Length
         Using MyReader As New Microsoft.VisualBasic.FileIO.
         TextFieldParser(My.Settings.JobDir & "\Clients.csv")
             MyReader.TextFieldType = Microsoft.VisualBasic.FileIO.FieldType.Delimited
-            MyReader.Delimiters = New String() {";"}
+            If MyReader.PeekChars(l).Contains(";") Then
+                MyReader.Delimiters = New String() {";"}
+            Else
+                MyReader.Delimiters = New String() {","}
+            End If
             Dim currentRow As String()
             MyReader.ReadFields()
             While Not MyReader.EndOfData
@@ -161,44 +257,49 @@ Public Class frmmain
                 nclient.Name = currentRow(0)
                 nclient.Software = New List(Of String)
                 Dim sw() As String
-                sw = Split(currentRow(1), ",")
+                sw = Split(currentRow(1), "&")
                 Dim i As Integer
                 For i = 0 To UBound(sw)
-                    nclient.Software.Add(sw(i))
+                    nclient.Software.Add(Trim(sw(i)))
                 Next i
+                nclient.Background = CBool(currentRow(2))
                 res.Add(nclient)
             End While
         End Using
-        Return res
-    End Function
-
-    Private Function LoadJobs(Path As String) As List(Of Job)
-        Dim res As New List(Of Job)
-        Using MyReader As New Microsoft.VisualBasic.FileIO.TextFieldParser(Path)
-            MyReader.TextFieldType = Microsoft.VisualBasic.FileIO.FieldType.Delimited
-            MyReader.Delimiters = New String() {";"}
-            Dim currentRow As String()
-            MyReader.ReadFields()
-            While Not MyReader.EndOfData
-                Dim njob As New Job
-                currentRow = MyReader.ReadFields()
-                njob.Software = currentRow(0)
-                njob.Ags = currentRow(1)
-                njob.Owner = currentRow(2)
-                njob.Timeout = currentRow(3)
-                njob.Client = New List(Of String)
-                njob.ID = MaxID + 1
-                MaxID = MaxID + 1
-                Dim splitClients() As String
-                splitClients = Split(currentRow(4), ",")
-                Dim i As Integer
-                For i = 0 To UBound(splitClients)
-                    njob.Client.Add(splitClients(i))
-                Next i
-                njob.Status = JobStatus.Waiting
-                res.Add(njob)
-            End While
-        End Using
+        'Put jobs back into preexisting clients
+        Dim notFound As Boolean
+        For Each oc In oldList
+            notFound = True
+            For Each c In res
+                If oc.Name = c.Name Then
+                    c.Job = oc.Job
+                    notFound = False
+                    Exit For
+                End If
+            Next
+            If notFound = True Then
+                'Reset job as client has vanished
+                oc.Job.Client = Nothing
+                oc.Job.Status = JobStatus.Waiting
+            End If
+        Next
+        'generate communication folders for clients if needed
+        For Each c In res
+            If c.Status <> ClientStatus.Busy Then
+                If System.IO.Directory.Exists(My.Settings.JobDir & "\Clients\" & c.Name & "\Input") Then
+                    System.IO.Directory.Delete(My.Settings.JobDir & "\Clients\" & c.Name & "\Input")
+                End If
+                If System.IO.Directory.Exists(My.Settings.JobDir & "\Clients\" & c.Name & "\Output") Then
+                    System.IO.Directory.Delete(My.Settings.JobDir & "\Clients\" & c.Name & "\Output")
+                End If
+            End If
+            If Not System.IO.Directory.Exists(My.Settings.JobDir & "\Clients\" & c.Name & "\Input") Then
+                System.IO.Directory.CreateDirectory(My.Settings.JobDir & "\Clients\" & c.Name & "\Input")
+            End If
+            If Not System.IO.Directory.Exists(My.Settings.JobDir & "\Clients\" & c.Name & "\Output") Then
+                System.IO.Directory.CreateDirectory(My.Settings.JobDir & "\Clients\" & c.Name & "\Output")
+            End If
+        Next
         Return res
     End Function
 
@@ -215,7 +316,7 @@ Public Class frmmain
         End If
     End Sub
 
-    Private Sub Timer_Tick(sender As Object, e As EventArgs) Handles Timer.Tick
+    Private Sub Timer_Tick(sender As Object, e As EventArgs) Handles Timer.Tick 'ToDo: Overhaul
         Dim findex As Integer
         Dim fjob As Job
         Dim writer As System.IO.StreamWriter
@@ -232,7 +333,7 @@ Public Class frmmain
                     writer.Close()
                 End If
                 writer = New IO.StreamWriter(My.Settings.JobDir & "\Done.csv", True)
-                writer.WriteLine(client.Job.Software & ";" & client.Job.Ags & ";" & client.Job.Owner & ";" & client.Job.Timeout & ";" & client.Name & ";" & client.Job.StartTime)
+                writer.WriteLine(client.Job.Software & ";" & client.Job.Args & ";" & client.Job.Owner & ";" & client.Job.Timeout & ";" & client.Name & ";" & client.Job.StartTime)
                 writer.Close()
                 client.Job = Nothing
             End If
@@ -258,17 +359,20 @@ Public Class frmmain
                 MsgBox("The set working directory does not exist", vbCritical)
                 Exit Sub
             End If
-            If System.IO.Directory.Exists(My.Settings.JobDir & "\Input") = False Then
-                System.IO.Directory.CreateDirectory(My.Settings.JobDir & "\Input")
+            If System.IO.Directory.Exists(My.Settings.JobDir & "\Jobs") = False Then
+                System.IO.Directory.CreateDirectory(My.Settings.JobDir & "\Jobs")
             End If
             If System.IO.Directory.Exists(My.Settings.JobDir & "\Clients") = False Then
                 System.IO.Directory.CreateDirectory(My.Settings.JobDir & "\Clients")
             End If
-            TaskWatcher.Path = My.Settings.JobDir & "\Input"
+            Clients = LoadClients(Clients)
+            TaskWatcher.Path = My.Settings.JobDir & "\Jobs"
             ClientWatcher.Path = My.Settings.JobDir & "\Clients"
-                CrawlJobFolder()
-                AssigneJobs()
-            End If
-            Timer.Enabled = chkRun.Checked
+            CrawlJobFolder()
+            AssigneJobs()
+        End If
+        Timer.Enabled = chkRun.Checked
+        TaskWatcher.EnableRaisingEvents = chkRun.Checked
+        ClientWatcher.EnableRaisingEvents = chkRun.Checked
     End Sub
 End Class
