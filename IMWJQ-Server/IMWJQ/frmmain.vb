@@ -14,6 +14,8 @@ Public Class frmmain
         Dim Status As JobStatus
         Dim StartTime As Date
         Dim ID As ULong
+        Dim AssigendTo As String
+        Dim Path As String
     End Structure
 
     Private Enum JobStatus
@@ -27,7 +29,7 @@ Public Class frmmain
         Dim Name As String
         Dim Software As List(Of String)
         Dim Status As ClientStatus
-        Dim Job As Job
+        Dim JobID As ULong
         Dim Background As Boolean
     End Structure
 
@@ -44,80 +46,62 @@ Public Class frmmain
     End Sub
 
     Private Sub AssigneJobs() 'ToDo: Overhaul
-        For Each Job In Jobs 'Look For machine specific jobs
+        For Each Job In Jobs 'Look for machine specific jobs
             If Job.Status = JobStatus.Waiting And Job.Client.Count > 0 Then
                 For Each Client In Clients
                     If Client.Status = ClientStatus.Free And Job.Client.Contains(Client.Name) And Client.Software.Contains(Job.Software) Then
                         Client.Status = ClientStatus.Busy
-                        Client.Job = Job
+                        Client.JobID = Job.ID
                         Job.Client.Clear()
                         Job.Client.Add(Client.Name)
                         Job.StartTime = Now
-                        WriteTask(My.Settings.JobDir & "\Clients\" & Client.Name & ".txt", Job)
+                        Job.Status = JobStatus.Working
+                        Job.AssigendTo = Client.Name
+                        WriteTask(Job)
                     End If
                 Next
             End If
         Next
 
-        For Each Job In Jobs 'Look For machine specific jobs
+        For Each Job In Jobs 'Look for general jobs
             If Job.Status = JobStatus.Waiting And Job.Client.Count = 0 Then
                 For Each Client In Clients
-                    If Client.Status = ClientStatus.Free And Client.Software.Contains(Job.Software) Then
+                    If Client.Status = ClientStatus.Free And Client.Software.Contains(Job.Software) And Job.Client.Count = 0 Then
                         Client.Status = ClientStatus.Busy
-                        Client.Job = Job
+                        Client.JobID = Job.ID
                         Job.Client.Clear()
-                        Job.Client.Add(Client.Name)
+                        Job.AssigendTo = Client.Name
                         Job.StartTime = Now
-                        WriteTask(My.Settings.JobDir & "\Clients\" & Client.Name & ".txt", Job)
+                        WriteTask(Job)
                     End If
                 Next
             End If
         Next
-        WrtieOutputs()
     End Sub
 
-    Private Sub WriteTask(Path As String, Job As Job) 'ToDo: Overhaul
-        Dim writer As New System.IO.StreamWriter(Path)
-        writer.WriteLine(Job.Software & ";" & Job.Args)
-        writer.Close()
-    End Sub
-
-    Private Sub WrtieOutputs() 'ToDo: Overhaul
-        Dim writer As System.IO.StreamWriter
-        Dim clinetsstr As String
-        writer = New IO.StreamWriter(My.Settings.JobDir & "\Waiting.csv")
-        writer.WriteLine("Software;Argrument;User;Timeout;Client")
-        For Each job In Jobs 'Create waiting list
-            If job.Status = JobStatus.Waiting Then
-                clinetsstr = ""
-                For Each client In job.Client
-                    clinetsstr = clinetsstr & "," & client
-                Next
-                clinetsstr = clinetsstr.Substring(1)
-                writer.WriteLine(job.Software & ";" & job.Args & ";" & job.Owner & ";" & job.Timeout & ";" & clinetsstr)
-            End If
-        Next job
-        writer.Close()
-        writer = New IO.StreamWriter(My.Application.Info.DirectoryPath & "In work.csv")
-        writer.WriteLine("Software;Argrument;User;Timeout;Client;Start time")
-        For Each job In Jobs 'Create working list
-            If job.Status = JobStatus.Working Then
-                writer.WriteLine(job.Software & ";" & job.Args & ";" & job.Owner & ";" & job.Timeout & ";" & job.Client.First & ";" & job.StartTime.ToShortTimeString)
-            End If
-        Next
-        writer.Close()
-        If System.IO.File.Exists(My.Application.Info.DirectoryPath & "Done.csv") = False Then
-            writer = New IO.StreamWriter(My.Application.Info.DirectoryPath & "Done.csv")
-            writer.WriteLine("Software;Argrument;User;Timeout;Client;Start time")
-            writer.Close()
+    Private Sub WriteTask(Job As Job)
+        'Create empty client directories
+        If Not System.IO.Directory.Exists(My.Settings.JobDir & "\Clients\" & Job.AssigendTo) Then
+            System.IO.Directory.CreateDirectory(My.Settings.JobDir & "\Clients\" & Job.AssigendTo)
         End If
-        writer = New IO.StreamWriter(My.Application.Info.DirectoryPath & "Done.csv", True)
-        For Each job In Jobs 'Create working list
-            If job.Status = JobStatus.Finished Then
-                writer.WriteLine(job.Software & ";" & job.Args & ";" & job.Owner & ";" & job.Timeout & ";" & job.Client.First & ";" & job.StartTime.ToShortTimeString)
+        If System.IO.Directory.Exists(My.Settings.JobDir & "\Clients\" & Job.AssigendTo & "\Output") Then
+            If Not DelFolder(My.Settings.JobDir & "\Clients\" & Job.AssigendTo & "\Output") Then
+                Exit Sub
             End If
-        Next
-        writer.Close()
+        End If
+        System.IO.Directory.CreateDirectory(My.Settings.JobDir & "\Clients\" & Job.AssigendTo & "\Output")
+        If System.IO.File.Exists(My.Settings.JobDir & "\Clients\" & Job.AssigendTo & "Job.txt") Then
+            Try
+                System.IO.File.Delete(My.Settings.JobDir & "\Clients\" & Job.AssigendTo & "Job.txt")
+            Catch
+                Exit Sub
+            End Try
+        End If
+        System.IO.File.Copy(Job.Path & "\" & "Job.txt", My.Settings.JobDir & "\Clients\" & Job.AssigendTo & "\Job.txt")
+        Dim Writer As New System.IO.StreamWriter(My.Settings.JobDir & "\Clients\" & Job.AssigendTo & "\Job.txt", True)
+        Writer.WriteLine()
+        Writer.Write("TaskPath=" & Job.Path) 'ToDo: testen!
+        Writer.Close()
     End Sub
 
     Private Sub CheckClients() 'ToDo: Overhaul
@@ -127,11 +111,11 @@ Public Class frmmain
             If System.IO.File.Exists(My.Settings.JobDir & "\Clients\" & Client.Name & ".txt") = False And Client.Status = ClientStatus.Busy Then
                 'Check for finished jobs
                 Client.Status = ClientStatus.Free
-                findex = Jobs.FindIndex(Function(p) p.ID = Client.Job.ID)
+                findex = Jobs.FindIndex(Function(p) p.ID = Client.JobID)
                 eJob = Jobs.Item(findex)
                 eJob.Status = JobStatus.Finished
                 Jobs.Item(findex) = eJob
-                Client.Job = Nothing
+                Client.JobID = Nothing
             End If
         Next
     End Sub
@@ -149,6 +133,7 @@ Public Class frmmain
             nJob.Software = ""
             nJob.Args = ""
             nJob.Software = ""
+            nJob.Path = JobDirs(i)
             nJob.Client = New List(Of String)
             nJob.ID = Nothing
             nJob.Status = JobStatus.Waiting
@@ -182,12 +167,12 @@ Public Class frmmain
                 'Job is new
                 MaxID = MaxID + 1
                 nJob.ID = MaxID
-
                 Try
                     SetJobID(JobDirs(i) & "\Job.txt", nJob.ID)
                 Catch
                     Continue For
                 End Try
+                Jobs.Add(nJob)
             Else
                 'Job already exists
                 Dim oJobIndex As Integer = Jobs.FindIndex(Function(x) x.ID = nJob.ID)
@@ -200,6 +185,7 @@ Public Class frmmain
                     Catch
                         Continue For
                     End Try
+                    Jobs.Add(nJob)
                 Else
                     If Jobs(oJobIndex).Status = JobStatus.Waiting Then
                         Jobs(oJobIndex) = nJob
@@ -272,35 +258,55 @@ Public Class frmmain
             notFound = True
             For Each c In res
                 If oc.Name = c.Name Then
-                    c.Job = oc.Job
+                    c.JobID = oc.JobID
+                    c.Status = oc.Status
                     notFound = False
                     Exit For
                 End If
             Next
             If notFound = True Then
                 'Reset job as client has vanished
-                oc.Job.Client = Nothing
-                oc.Job.Status = JobStatus.Waiting
+                Dim ClientsJobdex As Integer
+                Dim modjob As Job
+                ClientsJobdex = Jobs.FindIndex(Function(p) p.ID = oc.JobID)
+                modjob = Jobs(ClientsJobdex)
+                modjob.Client = Nothing
+                modjob.Status = JobStatus.Waiting
+                Jobs(ClientsJobdex) = modjob
             End If
         Next
         'generate communication folders for clients if needed
         For Each c In res
             If c.Status <> ClientStatus.Busy Then
-                If System.IO.Directory.Exists(My.Settings.JobDir & "\Clients\" & c.Name & "\Input") Then
-                    System.IO.Directory.Delete(My.Settings.JobDir & "\Clients\" & c.Name & "\Input")
+                If System.IO.Directory.Exists(My.Settings.JobDir & "\Clients\" & c.Name) Then
+                    DelFolder(My.Settings.JobDir & "\Clients\" & c.Name)
                 End If
-                If System.IO.Directory.Exists(My.Settings.JobDir & "\Clients\" & c.Name & "\Output") Then
-                    System.IO.Directory.Delete(My.Settings.JobDir & "\Clients\" & c.Name & "\Output")
-                End If
-            End If
-            If Not System.IO.Directory.Exists(My.Settings.JobDir & "\Clients\" & c.Name & "\Input") Then
-                System.IO.Directory.CreateDirectory(My.Settings.JobDir & "\Clients\" & c.Name & "\Input")
-            End If
-            If Not System.IO.Directory.Exists(My.Settings.JobDir & "\Clients\" & c.Name & "\Output") Then
-                System.IO.Directory.CreateDirectory(My.Settings.JobDir & "\Clients\" & c.Name & "\Output")
             End If
         Next
-        Return res
+        Return Res
+    End Function
+
+    Private Function DelFolder(Path As String) As Boolean
+        'Deletes a folder with its content
+        Try
+            If Not System.IO.Directory.Exists(Path) Then
+                Exit Function
+            End If
+            Dim SubFiles() As String
+            Dim SubDirs() As String
+            SubFiles = System.IO.Directory.GetFiles(Path)
+            For Each file In SubFiles
+                System.IO.File.Delete(file)
+            Next
+            SubDirs = System.IO.Directory.GetDirectories(Path)
+            For Each subDir In SubDirs
+                DelFolder(subDir)
+            Next
+            System.IO.Directory.Delete(Path)
+            Return True
+        Catch
+            Return False
+        End Try
     End Function
 
     Private Sub TaskWatcher_Changed(sender As Object, e As IO.FileSystemEventArgs) Handles TaskWatcher.Changed
@@ -317,27 +323,7 @@ Public Class frmmain
     End Sub
 
     Private Sub Timer_Tick(sender As Object, e As EventArgs) Handles Timer.Tick 'ToDo: Overhaul
-        Dim findex As Integer
-        Dim fjob As Job
-        Dim writer As System.IO.StreamWriter
-        For Each client In Clients
-            If (Now - client.Job.StartTime).TotalMinutes > client.Job.Timeout Then
-                client.Status = ClientStatus.Dead
-                findex = Jobs.FindIndex(Function(p) p.ID = client.Job.ID)
-                fjob = Jobs.Item(findex)
-                fjob.Status = JobStatus.Failed
-                Jobs.Item(findex) = fjob
-                If System.IO.File.Exists(My.Settings.JobDir & "\Failed.csv") = False Then
-                    writer = New IO.StreamWriter(My.Settings.JobDir & "\Done.csv")
-                    writer.WriteLine("Software;Argument;User;Timeout;Client;Start time")
-                    writer.Close()
-                End If
-                writer = New IO.StreamWriter(My.Settings.JobDir & "\Done.csv", True)
-                writer.WriteLine(client.Job.Software & ";" & client.Job.Args & ";" & client.Job.Owner & ";" & client.Job.Timeout & ";" & client.Name & ";" & client.Job.StartTime)
-                writer.Close()
-                client.Job = Nothing
-            End If
-        Next
+
     End Sub
 
     Private Sub btnSelJobDir_Click(sender As Object, e As EventArgs) Handles btnSelJobDir.Click
@@ -371,6 +357,7 @@ Public Class frmmain
             CrawlJobFolder()
             AssigneJobs()
         End If
+        btnSelJobDir.Enabled = Not chkRun.Checked
         Timer.Enabled = chkRun.Checked
         TaskWatcher.EnableRaisingEvents = chkRun.Checked
         ClientWatcher.EnableRaisingEvents = chkRun.Checked
