@@ -36,12 +36,16 @@ Partial Class frmmain
         '
         'TaskWatcher
         '
+        Me.TaskWatcher.EnableRaisingEvents = True
         Me.TaskWatcher.Filter = "*.csv*"
+        Me.TaskWatcher.IncludeSubdirectories = True
         Me.TaskWatcher.NotifyFilter = System.IO.NotifyFilters.LastWrite
         Me.TaskWatcher.SynchronizingObject = Me
         '
         'ClientWatcher
         '
+        Me.ClientWatcher.EnableRaisingEvents = True
+        Me.ClientWatcher.IncludeSubdirectories = True
         Me.ClientWatcher.SynchronizingObject = Me
         '
         'Timer

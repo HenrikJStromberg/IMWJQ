@@ -45,38 +45,55 @@ Public Class frmmain
         Clients = New List(Of Client)
     End Sub
 
-    Private Sub AssigneJobs() 'ToDo: Overhaul
-        For Each Job In Jobs 'Look for machine specific jobs
-            If Job.Status = JobStatus.Waiting And Job.Client.Count > 0 Then
-                For Each Client In Clients
-                    If Client.Status = ClientStatus.Free And Job.Client.Contains(Client.Name) And Client.Software.Contains(Job.Software) Then
-                        Client.Status = ClientStatus.Busy
-                        Client.JobID = Job.ID
-                        Job.Client.Clear()
-                        Job.Client.Add(Client.Name)
-                        Job.StartTime = Now
-                        Job.Status = JobStatus.Working
-                        Job.AssigendTo = Client.Name
-                        WriteTask(Job)
+    Private Sub AssigneJobs()
+        Dim tClient As Client
+        Dim tJob As Job
+        Dim i As Integer
+        Dim j As Integer
+        'Assignes new jobs to free clients
+        For i = 0 To Jobs.Count - 1 'Look for machine specific jobs
+            tJob = Jobs(i)
+            If tJob.Status = JobStatus.Waiting And tJob.Client.Count > 0 Then
+                For j = 0 To Clients.Count - 1
+                    tClient = Clients(j)
+                    If tClient.Status = ClientStatus.Free And tJob.Client.Contains(tClient.Name) And tClient.Software.Contains(tJob.Software) Then
+                        tClient.Status = ClientStatus.Busy
+                        tClient.JobID = tJob.ID
+                        tJob.Client.Clear()
+                        tJob.Client.Add(tClient.Name)
+                        tJob.StartTime = Now
+                        tJob.Status = JobStatus.Working
+                        tJob.AssigendTo = tClient.Name
+                        WriteTask(tJob)
+                        Clients(j) = tClient
+                        Jobs(i) = tJob
+                        Exit For
                     End If
-                Next
+                Next j
             End If
-        Next
+        Next i
 
-        For Each Job In Jobs 'Look for general jobs
-            If Job.Status = JobStatus.Waiting And Job.Client.Count = 0 Then
-                For Each Client In Clients
-                    If Client.Status = ClientStatus.Free And Client.Software.Contains(Job.Software) And Job.Client.Count = 0 Then
-                        Client.Status = ClientStatus.Busy
-                        Client.JobID = Job.ID
-                        Job.Client.Clear()
-                        Job.AssigendTo = Client.Name
-                        Job.StartTime = Now
-                        WriteTask(Job)
+        For i = 0 To Jobs.Count - 1 'Look for general jobs
+            tJob = Jobs(i)
+            If tJob.Status = JobStatus.Waiting And tJob.Client.Count = 0 Then
+                For j = 0 To Clients.Count - 1
+                    tClient = Clients(j)
+                    If tClient.Status = ClientStatus.Free And tClient.Software.Contains(tJob.Software) And tJob.Client.Count = 0 Then
+                        tClient.Status = ClientStatus.Busy
+                        tClient.JobID = tJob.ID
+                        tJob.Client.Clear()
+                        tJob.AssigendTo = tClient.Name
+                        tJob.Status = JobStatus.Working
+                        tJob.StartTime = Now
+                        WriteTask(tJob)
+                        Clients(j) = tClient
+                        Jobs(i) = tJob
+                        Exit For
                     End If
                 Next
             End If
         Next
+        PrintStatus()
     End Sub
 
     Private Sub WriteTask(Job As Job)
@@ -85,7 +102,7 @@ Public Class frmmain
             System.IO.Directory.CreateDirectory(My.Settings.JobDir & "\Clients\" & Job.AssigendTo)
         End If
         If System.IO.Directory.Exists(My.Settings.JobDir & "\Clients\" & Job.AssigendTo & "\Output") Then
-            If Not DelFolder(My.Settings.JobDir & "\Clients\" & Job.AssigendTo & "\Output") Then
+            If Not DelDir(My.Settings.JobDir & "\Clients\" & Job.AssigendTo & "\Output") Then
                 Exit Sub
             End If
         End If
@@ -104,23 +121,8 @@ Public Class frmmain
         Writer.Close()
     End Sub
 
-    Private Sub CheckClients() 'ToDo: Overhaul
-        For Each Client In Clients
-            Dim eJob As Job
-            Dim findex As Integer
-            If System.IO.File.Exists(My.Settings.JobDir & "\Clients\" & Client.Name & ".txt") = False And Client.Status = ClientStatus.Busy Then
-                'Check for finished jobs
-                Client.Status = ClientStatus.Free
-                findex = Jobs.FindIndex(Function(p) p.ID = Client.JobID)
-                eJob = Jobs.Item(findex)
-                eJob.Status = JobStatus.Finished
-                Jobs.Item(findex) = eJob
-                Client.JobID = Nothing
-            End If
-        Next
-    End Sub
-
     Private Sub CrawlJobFolder()
+        'Crawls the job folder for new jobs
         Dim JobDirs() As String
         JobDirs = System.IO.Directory.GetDirectories(My.Settings.JobDir & "\Jobs")
         Dim i As Integer
@@ -279,17 +281,18 @@ Public Class frmmain
         For Each c In res
             If c.Status <> ClientStatus.Busy Then
                 If System.IO.Directory.Exists(My.Settings.JobDir & "\Clients\" & c.Name) Then
-                    DelFolder(My.Settings.JobDir & "\Clients\" & c.Name)
+                    DelDir(My.Settings.JobDir & "\Clients\" & c.Name)
                 End If
             End If
         Next
         Return Res
     End Function
 
-    Private Function DelFolder(Path As String) As Boolean
+    Private Function DelDir(Path As String) As Boolean
         'Deletes a folder with its content
         Try
             If Not System.IO.Directory.Exists(Path) Then
+                Return True
                 Exit Function
             End If
             Dim SubFiles() As String
@@ -300,7 +303,7 @@ Public Class frmmain
             Next
             SubDirs = System.IO.Directory.GetDirectories(Path)
             For Each subDir In SubDirs
-                DelFolder(subDir)
+                DelDir(subDir)
             Next
             System.IO.Directory.Delete(Path)
             Return True
@@ -317,13 +320,34 @@ Public Class frmmain
     End Sub
 
     Private Sub ClientWatcher_Changed(sender As Object, e As IO.FileSystemEventArgs) Handles ClientWatcher.Changed
-        If chkRun.Checked Then
-            CheckClients()
-        End If
+        'Check for finished jobs
+        Dim tClient As Client
+        Dim i As Integer
+        For i = 0 To Clients.Count - 1
+            tClient = Clients(i)
+            Dim tJob As Job
+            Dim findex As Integer
+            If System.IO.File.Exists(My.Settings.JobDir & "\Clients\" & tClient.Name & "\Done.txt") And tClient.Status = ClientStatus.Busy Then
+                tJob = Jobs.Item(findex)
+                If My.Computer.FileSystem.DirectoryExists(tJob.Path & "\Output") Then
+                    DelDir(tJob.Path & "\Output")
+                End If
+                My.Computer.FileSystem.CreateDirectory(tJob.Path & "\Output")
+                My.Computer.FileSystem.CopyDirectory(My.Settings.JobDir & "\Clients\" & tClient.Name & "\Output", tJob.Path & "\Output", True)
+                DelDir(My.Settings.JobDir & "\Clients\" & tClient.Name & "\Output")
+                tClient.Status = ClientStatus.Free
+                findex = Jobs.FindIndex(Function(p) p.ID = tClient.JobID)
+                tJob.Status = JobStatus.Finished
+                Jobs.Item(findex) = tJob
+                tClient.JobID = Nothing
+                Clients(i) = tClient
+            End If
+        Next
+        PrintStatus()
     End Sub
 
     Private Sub Timer_Tick(sender As Object, e As EventArgs) Handles Timer.Tick 'ToDo: Overhaul
-
+        'Checks if a job has timed out
     End Sub
 
     Private Sub btnSelJobDir_Click(sender As Object, e As EventArgs) Handles btnSelJobDir.Click
@@ -336,6 +360,33 @@ Public Class frmmain
 
     Private Sub frmmain_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
         My.Settings.Save()
+    End Sub
+
+    Private Sub PrintStatus()
+        Dim Content As String
+        Dim s As String
+        Content = "<!DOCTYPE html>" & vbNewLine & "<html>" & vbNewLine & "<head>" & vbNewLine & "<style>" & vbNewLine & "table, th, td {" & vbNewLine & "  border: 1px solid black;" & vbNewLine & "border-collapse: collapse;" & "}" & vbNewLine
+        Content = Content & "th {" & vbNewLine & "  text-align: left;" & vbNewLine & "}" & vbNewLine & "</style>" & vbNewLine & "</head>" & vbNewLine & "<body>" & vbNewLine & "<h2>IMWJQ Job Status (" & System.DateTime.Now & ")</h2>" & vbNewLine
+        Content = Content & "<table>" & vbNewLine & "  <tr>" & vbNewLine & "<th>ID</th>" & vbNewLine & "<th>Status</th>" & vbNewLine & "<th>User</th>" & vbNewLine & "<th>Client</th>" & vbNewLine & "<th>Start Time</th>" & vbNewLine & "<th>Software</th>" & vbNewLine & "  </tr>"
+        For Each j In Jobs
+            Content = Content & vbNewLine & "  <tr>"
+            Content = Content & vbNewLine & "    <td>" & j.ID & "</td>"
+            Content = Content & vbNewLine & "    <td>" & j.Status.ToString & "</td>"
+            Content = Content & vbNewLine & "    <td>" & j.Owner & "</td>"
+            Content = Content & vbNewLine & "    <td>"
+            For Each s In j.Client
+                Content = Content & s & ", "
+            Next
+            Content = Content.Substring(0, Content.Length - 2)
+            Content = Content & vbNewLine & "    <td>" & j.StartTime & "</td>"
+            Content = Content & vbNewLine & "    <td>" & j.Software & "</td>"
+            Content = Content & vbNewLine & "  </tr>"
+        Next
+
+        Content = Content & vbNewLine & "</table>" & vbNewLine & "</body>" & vbNewLine & "</html>"
+        Dim Writer As New System.IO.StreamWriter(My.Settings.JobDir & "\IMWJQ_Status.html")
+        Writer.Write(Content)
+        Writer.Close()
     End Sub
 
     Private Sub chkRun_CheckedChanged(sender As Object, e As EventArgs) Handles chkRun.CheckedChanged
@@ -357,6 +408,7 @@ Public Class frmmain
             CrawlJobFolder()
             AssigneJobs()
         End If
+        btnSelJobDir.Enabled = Not chkRun.Checked
         btnSelJobDir.Enabled = Not chkRun.Checked
         Timer.Enabled = chkRun.Checked
         TaskWatcher.EnableRaisingEvents = chkRun.Checked
