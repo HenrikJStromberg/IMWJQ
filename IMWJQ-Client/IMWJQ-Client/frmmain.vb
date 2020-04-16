@@ -6,8 +6,20 @@ Public Class frmmain
     Private Structure config
         Dim Prio As Diagnostics.ProcessPriorityClass
         Dim Software As List(Of executable)
-        Dim WorkerPath As String
+        Dim TempDir As String
+        Dim ServerPath As String
+        Dim Tokens As List(Of Token)
+    End Structure
+
+    Private Structure Job
+        Dim Software As String
+        Dim Arg As String
         Dim TaskPath As String
+    End Structure
+
+    Private Structure Token
+        Dim Name As String
+        Dim Value As String
     End Structure
 
     Private Structure executable
@@ -16,35 +28,104 @@ Public Class frmmain
     End Structure
 
     Private Sub frmmain_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        Me.Hide()
         cnf = ReadConfig()
+        If System.IO.Directory.Exists(cnf.TempDir) Then
+            DelDir(cnf.TempDir)
+        End If
+        System.IO.Directory.CreateDirectory(cnf.TempDir)
+
         Diagnostics.Process.GetCurrentProcess().PriorityClass = cnf.Prio
-        If File.Exists(cnf.TaskPath) Then
+
+        If File.Exists(cnf.ServerPath & "\Job.txt") Then
             ExecuteTask()
         End If
 
-        Watcher.Path = cnf.TaskPath.Substring(0, cnf.TaskPath.LastIndexOf("\"))
-        Watcher.Filter = "*" & cnf.TaskPath.Substring(cnf.TaskPath.LastIndexOf("\") + 1)
+
+
+        Watcher.Path = cnf.ServerPath.Substring(0, cnf.ServerPath.LastIndexOf("\"))
+        Watcher.Filter = "*" & cnf.ServerPath.Substring(cnf.ServerPath.LastIndexOf("\") + 1)
 
     End Sub
 
-    Private Sub ExecuteTask()
+    Private Function DelDir(Path As String) As Boolean
+        'Deletes a folder with its content
+        Try
+            If Not System.IO.Directory.Exists(Path) Then
+                If System.IO.File.Exists(Path) Then
+                    System.IO.File.Delete(Path)
+                End If
+                Return True
+                Exit Function
+            End If
+            Dim SubFiles() As String
+            Dim SubDirs() As String
+            SubFiles = System.IO.Directory.GetFiles(Path)
+            For Each file In SubFiles
+                System.IO.File.Delete(file)
+            Next
+            SubDirs = System.IO.Directory.GetDirectories(Path)
+            For Each subDir In SubDirs
+                DelDir(subDir)
+            Next
+            System.IO.Directory.Delete(Path)
+            Return True
+        Catch
+            Return False
+        End Try
+    End Function
+
+    Private Function ApplyTokens(str As String, Tokens As List(Of Token))
+        For Each Token In Tokens
+            str.Replace(Token.Name, Token.Value)
+        Next
+        Return str
+    End Function
+
+    Private Sub ExecuteTask() 'ToDo: Rework
+        If Not System.IO.File.Exists(cnf.ServerPath & "\Job.txt") Then Exit Sub
+
         Dim readbuffer As String
-        Dim appstring As String
-        Dim apppath As String
-        Dim arg As String
-        Dim reader As New StreamReader(cnf.TaskPath)
-        apppath = ""
-        If reader.EndOfStream = False Then
+        Dim reader As New StreamReader(cnf.ServerPath & "\Job.txt")
+        Dim Parameter As String
+        Dim Value As String
+        Dim Job As Job
+
+        While Not reader.EndOfStream
             readbuffer = reader.ReadLine()
-        Else
-            Exit Sub
+            If Not readbuffer.Contains("=") Then Continue While
+            Parameter = readbuffer.Substring(0, readbuffer.IndexOf("="))
+            Value = readbuffer.Substring(readbuffer.IndexOf("=") + 1)
+            Select Case Parameter
+                Case "Software"
+                    Job.Software = Value
+                Case "Arg"
+                    Job.Arg = ApplyTokens(Value, cnf.Tokens)
+                Case "TaskPath"
+                    Job.TaskPath = Value
+                Case "Clear"
+                    DelDir(ApplyTokens(Value, cnf.Tokens))
+            End Select
+        End While
+        If System.IO.Directory.Exists(Job.TaskPath & "\Util files") Then
+            My.Computer.FileSystem.CopyDirectory(Job.TaskPath & "\Util files", cnf.TempDir & "\Util files")
         End If
-        reader.Close()
-        appstring = readbuffer.Substring(0, readbuffer.IndexOf(";"))
-        arg = readbuffer.Substring(readbuffer.IndexOf(";") + 1)
+
+        Dim SubFiles() As String
+        SubFiles = System.IO.Directory.GetFiles(Job.TaskPath)
+        For Each file In SubFiles
+            If file.Substring(0, file.LastIndexOf(".")) = "task" Then
+                If System.IO.File.Exists(cnf.TempDir & "\" & file) Then
+                    System.IO.File.Delete(cnf.TempDir & "\" & file)
+                End If
+                System.IO.File.Copy(Job.TaskPath & "\" & file, cnf.TempDir & "\" & file)
+                Exit For
+            End If
+        Next
+        'ToDo: Apply Tokens to task file
+
+        Dim apppath As String
         For Each sw In cnf.Software
-            If sw.Name = appstring Then
+            If sw.Name = Job.Software Then
                 apppath = sw.Path
             End If
         Next
@@ -52,38 +133,58 @@ Public Class frmmain
             Exit Sub
         End If
         Dim runer As New Process()
-        runer = runer.Start(apppath, arg)
+        runer = runer.Start(apppath, Job.Arg)
         runer.PriorityClass = cnf.Prio
         runer.WaitForExit()
-        File.Delete(cnf.TaskPath)
+
     End Sub
 
     Private Function ReadConfig() As config
-        Dim cnf As config
         Dim readbuffer As String
+        Dim Parameter As String
+        Dim cnf As config
+        Dim Value As String
+        Dim NewSW As executable
+        Dim NewToken As Token
         cnf.Software = New List(Of executable)
+        cnf.Tokens = New List(Of Token)
         Dim reader As New StreamReader(My.Application.Info.DirectoryPath & "\LocalConfig.conf")
-        cnf.TaskPath = reader.ReadLine()
-        cnf.WorkerPath = reader.ReadLine()
-        readbuffer = reader.ReadLine()
-        Select Case readbuffer
-            Case 1
-                cnf.Prio = ProcessPriorityClass.Idle
-            Case 2
-                cnf.Prio = ProcessPriorityClass.BelowNormal
-            Case 3
-                cnf.Prio = ProcessPriorityClass.Normal
-            Case 4
-                cnf.Prio = ProcessPriorityClass.AboveNormal
-            Case 5
-                cnf.Prio = ProcessPriorityClass.High
-        End Select
-        While reader.EndOfStream = False
-            Dim sw As executable
-            readbuffer = reader.ReadLine
-            sw.Name = readbuffer.Substring(0, readbuffer.IndexOf(";"))
-            sw.Path = readbuffer.Substring(readbuffer.IndexOf(";") + 1)
-            cnf.Software.Add(sw)
+        While Not reader.EndOfStream
+            readbuffer = reader.ReadLine()
+            If Not readbuffer.Contains("=") Then Continue While
+            Parameter = readbuffer.Substring(0, readbuffer.IndexOf("="))
+            Value = readbuffer.Substring(readbuffer.IndexOf("=") + 1)
+            Select Case Parameter
+                Case "ServerPath"
+                    cnf.ServerPath = Value
+                Case "TempDir"
+                    cnf.TempDir = Value
+                Case "Priority"
+                    Select Case Value
+                        Case "1"
+                            cnf.Prio = ProcessPriorityClass.Idle
+                        Case "2"
+                            cnf.Prio = ProcessPriorityClass.BelowNormal
+                        Case "4"
+                            cnf.Prio = ProcessPriorityClass.AboveNormal
+                        Case "5"
+                            cnf.Prio = ProcessPriorityClass.High
+                        Case Else
+                            cnf.Prio = ProcessPriorityClass.Normal
+                    End Select
+                Case "Software"
+                    If readbuffer.Contains(";") Then
+                        NewSW.Name = readbuffer.Substring(0, readbuffer.IndexOf(";"))
+                        NewSW.Path = readbuffer.Substring(readbuffer.IndexOf(";") + 1)
+                        cnf.Software.Add(NewSW)
+                    End If
+                Case "Token"
+                    If readbuffer.Contains(";") Then
+                        NewToken.Name = readbuffer.Substring(0, readbuffer.IndexOf(";"))
+                        NewToken.Value = readbuffer.Substring(readbuffer.IndexOf(";") + 1)
+                        cnf.Tokens.Add(NewToken)
+                    End If
+            End Select
         End While
         reader.Close()
         Return cnf
