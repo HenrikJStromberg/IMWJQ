@@ -30,7 +30,6 @@ Public Class frmmain
         Dim Software As List(Of String)
         Dim Status As ClientStatus
         Dim JobID As ULong
-        Dim Background As Boolean
     End Structure
 
     Private Enum ClientStatus
@@ -250,7 +249,6 @@ Public Class frmmain
                 For i = 0 To UBound(sw)
                     nclient.Software.Add(Trim(sw(i)))
                 Next i
-                nclient.Background = CBool(currentRow(2))
                 res.Add(nclient)
             End While
         End Using
