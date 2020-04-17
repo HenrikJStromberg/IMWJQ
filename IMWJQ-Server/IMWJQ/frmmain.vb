@@ -39,6 +39,7 @@ Public Class frmmain
     End Enum
 
     Private Sub frmmain_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        MaxIDInput.Maximum = ULong.MaxValue
         lblJobDir.Text = My.Settings.JobDir
         Jobs = New List(Of Job)
         Clients = New List(Of Client)
@@ -122,6 +123,9 @@ Public Class frmmain
 
     Private Sub CrawlJobFolder()
         'Crawls the job folder for new jobs
+        If MaxID >= MaxIDInput.Value Then
+            Exit Sub 'Overflow of job ID Server need ot restart
+        End If
         Dim JobDirs() As String
         JobDirs = System.IO.Directory.GetDirectories(My.Settings.JobDir & "\Jobs")
         Dim i As Integer
@@ -344,8 +348,23 @@ Public Class frmmain
         PrintStatus()
     End Sub
 
+
     Private Sub Timer_Tick(sender As Object, e As EventArgs) Handles Timer.Tick 'ToDo: Overhaul
         'Checks if a job has timed out
+        Dim SheduledJobs As Boolean
+        For Each job In Jobs
+            If job.Status = JobStatus.Working And job.Timeout > 0 Then
+                If (Now - job.StartTime).TotalMinutes > job.Timeout Then
+                    job.Status = JobStatus.Failed
+                End If
+            End If
+            If job.Status <> JobStatus.Waiting Then
+                SheduledJobs = True
+            End If
+        Next
+        If SheduledJobs = False And MaxID >= MaxIDInput.Value Then
+            frmmain_Load(Nothing, Nothing)
+        End If
     End Sub
 
     Private Sub btnSelJobDir_Click(sender As Object, e As EventArgs) Handles btnSelJobDir.Click
@@ -411,5 +430,12 @@ Public Class frmmain
         Timer.Enabled = chkRun.Checked
         TaskWatcher.EnableRaisingEvents = chkRun.Checked
         ClientWatcher.EnableRaisingEvents = chkRun.Checked
+    End Sub
+
+    Private Sub cmdRestart_Click(sender As Object, e As EventArgs) Handles cmdRestart.Click
+        If MsgBox("Are you sure that you want to restart the server? Waiting or working jobs may be lost.", vbYesNo) = MsgBoxResult.Yes Then
+            chkRun.Checked = False
+            frmmain_Load(Nothing, Nothing)
+        End If
     End Sub
 End Class

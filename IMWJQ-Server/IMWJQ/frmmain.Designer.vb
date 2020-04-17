@@ -30,8 +30,12 @@ Partial Class frmmain
         Me.btnSelJobDir = New System.Windows.Forms.Button()
         Me.lblJobDir = New System.Windows.Forms.Label()
         Me.chkRun = New System.Windows.Forms.CheckBox()
+        Me.cmdRestart = New System.Windows.Forms.Button()
+        Me.Label1 = New System.Windows.Forms.Label()
+        Me.MaxIDInput = New System.Windows.Forms.NumericUpDown()
         CType(Me.TaskWatcher, System.ComponentModel.ISupportInitialize).BeginInit()
         CType(Me.ClientWatcher, System.ComponentModel.ISupportInitialize).BeginInit()
+        CType(Me.MaxIDInput, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
         '
         'TaskWatcher
@@ -72,18 +76,50 @@ Partial Class frmmain
         'chkRun
         '
         Me.chkRun.AutoSize = True
-        Me.chkRun.Location = New System.Drawing.Point(17, 65)
+        Me.chkRun.Location = New System.Drawing.Point(11, 153)
         Me.chkRun.Name = "chkRun"
         Me.chkRun.Size = New System.Drawing.Size(80, 17)
         Me.chkRun.TabIndex = 2
         Me.chkRun.Text = "Run Server"
         Me.chkRun.UseVisualStyleBackColor = True
         '
+        'cmdRestart
+        '
+        Me.cmdRestart.Location = New System.Drawing.Point(11, 65)
+        Me.cmdRestart.Name = "cmdRestart"
+        Me.cmdRestart.Size = New System.Drawing.Size(134, 40)
+        Me.cmdRestart.TabIndex = 3
+        Me.cmdRestart.Text = "Restart Server"
+        Me.cmdRestart.UseVisualStyleBackColor = True
+        '
+        'Label1
+        '
+        Me.Label1.AutoSize = True
+        Me.Label1.Location = New System.Drawing.Point(12, 111)
+        Me.Label1.Name = "Label1"
+        Me.Label1.Size = New System.Drawing.Size(119, 13)
+        Me.Label1.TabIndex = 5
+        Me.Label1.Text = "Auto restart after n jobs:"
+        '
+        'MaxIDInput
+        '
+        Me.MaxIDInput.Increment = New Decimal(New Integer() {100, 0, 0, 0})
+        Me.MaxIDInput.Location = New System.Drawing.Point(15, 127)
+        Me.MaxIDInput.Maximum = New Decimal(New Integer() {10000, 0, 0, 0})
+        Me.MaxIDInput.Name = "MaxIDInput"
+        Me.MaxIDInput.Size = New System.Drawing.Size(116, 20)
+        Me.MaxIDInput.TabIndex = 6
+        Me.MaxIDInput.ThousandsSeparator = True
+        Me.MaxIDInput.Value = New Decimal(New Integer() {10000, 0, 0, 0})
+        '
         'frmmain
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(800, 450)
+        Me.Controls.Add(Me.MaxIDInput)
+        Me.Controls.Add(Me.Label1)
+        Me.Controls.Add(Me.cmdRestart)
         Me.Controls.Add(Me.chkRun)
         Me.Controls.Add(Me.lblJobDir)
         Me.Controls.Add(Me.btnSelJobDir)
@@ -93,6 +129,7 @@ Partial Class frmmain
         Me.Text = "IMWJQ Server"
         CType(Me.TaskWatcher, System.ComponentModel.ISupportInitialize).EndInit()
         CType(Me.ClientWatcher, System.ComponentModel.ISupportInitialize).EndInit()
+        CType(Me.MaxIDInput, System.ComponentModel.ISupportInitialize).EndInit()
         Me.ResumeLayout(False)
         Me.PerformLayout()
 
@@ -105,4 +142,7 @@ Partial Class frmmain
     Friend WithEvents btnSelJobDir As Windows.Forms.Button
     Friend WithEvents FolderBrowserDialog As Windows.Forms.FolderBrowserDialog
     Friend WithEvents chkRun As Windows.Forms.CheckBox
+    Friend WithEvents cmdRestart As Windows.Forms.Button
+    Friend WithEvents MaxIDInput As Windows.Forms.NumericUpDown
+    Friend WithEvents Label1 As Windows.Forms.Label
 End Class
