@@ -15,6 +15,7 @@ Public Class frmmain
         Dim Software As String
         Dim Arg As String
         Dim TaskPath As String
+        Dim ID As ULong
     End Structure
 
     Private Structure Token
@@ -40,11 +41,7 @@ Public Class frmmain
             ExecuteTask()
         End If
 
-
-
         Watcher.Path = cnf.ServerPath.Substring(0, cnf.ServerPath.LastIndexOf("\"))
-        Watcher.Filter = "*" & cnf.ServerPath.Substring(cnf.ServerPath.LastIndexOf("\") + 1)
-
     End Sub
 
     Private Function DelDir(Path As String) As Boolean
@@ -76,19 +73,22 @@ Public Class frmmain
 
     Private Function ApplyTokens(str As String, Tokens As List(Of Token))
         For Each Token In Tokens
-            str.Replace(Token.Name, Token.Value)
+            str = str.Replace(Token.Name, Token.Value)
         Next
         Return str
     End Function
 
-    Private Sub ExecuteTask() 'ToDo: Rework
+    Private Sub ExecuteTask()
         If Not System.IO.File.Exists(cnf.ServerPath & "\Job.txt") Then Exit Sub
 
         Dim readbuffer As String
         Dim reader As New StreamReader(cnf.ServerPath & "\Job.txt")
+        Dim writer As StreamWriter
         Dim Parameter As String
         Dim Value As String
         Dim Job As Job
+
+        lblStatus.Text = "Copying input files"
 
         While Not reader.EndOfStream
             readbuffer = reader.ReadLine()
@@ -98,12 +98,14 @@ Public Class frmmain
             Select Case Parameter
                 Case "Software"
                     Job.Software = Value
-                Case "Arg"
+                Case "Args"
                     Job.Arg = ApplyTokens(Value, cnf.Tokens)
                 Case "TaskPath"
                     Job.TaskPath = Value
                 Case "Clear"
                     DelDir(ApplyTokens(Value, cnf.Tokens))
+                Case "ID"
+                    Job.ID = CULng(Value)
             End Select
         End While
         If System.IO.Directory.Exists(Job.TaskPath & "\Util files") Then
@@ -112,31 +114,47 @@ Public Class frmmain
 
         Dim SubFiles() As String
         SubFiles = System.IO.Directory.GetFiles(Job.TaskPath)
+        readbuffer = ""
         For Each file In SubFiles
-            If file.Substring(0, file.LastIndexOf(".")) = "task" Then
-                If System.IO.File.Exists(cnf.TempDir & "\" & file) Then
-                    System.IO.File.Delete(cnf.TempDir & "\" & file)
+            If Path.GetFileNameWithoutExtension(file) = "task" Then
+                If System.IO.File.Exists(cnf.TempDir & "\" & Path.GetFileName(file)) Then
+                    System.IO.File.Delete(cnf.TempDir & "\" & Path.GetFileName(file))
                 End If
-                System.IO.File.Copy(Job.TaskPath & "\" & file, cnf.TempDir & "\" & file)
+                reader = New StreamReader(file)
+                readbuffer = readbuffer & reader.ReadToEnd
+                reader.Close()
+                writer = New StreamWriter(cnf.TempDir & "\" & Path.GetFileName(file))
+                writer.Write(ApplyTokens(readbuffer, cnf.Tokens))
+                writer.Close()
                 Exit For
             End If
         Next
-        'ToDo: Apply Tokens to task file
 
         Dim apppath As String
         For Each sw In cnf.Software
             If sw.Name = Job.Software Then
                 apppath = sw.Path
+                Exit For
             End If
         Next
         If apppath = "" Then
             Exit Sub
         End If
         Dim runer As New Process()
-        runer = runer.Start(apppath, Job.Arg)
-        runer.PriorityClass = cnf.Prio
-        runer.WaitForExit()
 
+        lblStatus.Text = "Running worker"
+
+        runer = runer.Start(apppath, Job.Arg)
+        Try
+            runer.PriorityClass = cnf.Prio
+        Catch
+        End Try
+        runer.WaitForExit()
+        If Directory.Exists(cnf.TempDir & "\Output") Then
+            lblStatus.Text = "Copying Output files"
+            My.Computer.FileSystem.CopyDirectory(cnf.TempDir & "\Output", cnf.ServerPath & "\Output", True)
+        End If
+        lblStatus.Text = "Free"
     End Sub
 
     Private Function ReadConfig() As config
@@ -174,12 +192,14 @@ Public Class frmmain
                     End Select
                 Case "Software"
                     If readbuffer.Contains(";") Then
+                        readbuffer = readbuffer.Substring(readbuffer.IndexOf("=") + 1)
                         NewSW.Name = readbuffer.Substring(0, readbuffer.IndexOf(";"))
                         NewSW.Path = readbuffer.Substring(readbuffer.IndexOf(";") + 1)
                         cnf.Software.Add(NewSW)
                     End If
                 Case "Token"
                     If readbuffer.Contains(";") Then
+                        readbuffer = readbuffer.Substring(readbuffer.IndexOf("=") + 1)
                         NewToken.Name = readbuffer.Substring(0, readbuffer.IndexOf(";"))
                         NewToken.Value = readbuffer.Substring(readbuffer.IndexOf(";") + 1)
                         cnf.Tokens.Add(NewToken)
@@ -192,5 +212,9 @@ Public Class frmmain
 
     Private Sub Watcher_Changed(sender As Object, e As FileSystemEventArgs) Handles Watcher.Changed
         ExecuteTask()
+    End Sub
+
+    Private Sub ChkStop_CheckedChanged(sender As Object, e As EventArgs) Handles ChkStop.CheckedChanged
+        Watcher.EnableRaisingEvents = Not ChkStop.Checked
     End Sub
 End Class
