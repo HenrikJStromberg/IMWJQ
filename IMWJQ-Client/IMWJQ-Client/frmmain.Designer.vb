@@ -75,7 +75,6 @@ Partial Class frmmain
         Me.Name = "frmmain"
         Me.ShowInTaskbar = False
         Me.Text = "IMWJQ Client"
-        Me.WindowState = System.Windows.Forms.FormWindowState.Minimized
         CType(Me.Watcher, System.ComponentModel.ISupportInitialize).EndInit()
         Me.ResumeLayout(False)
         Me.PerformLayout()

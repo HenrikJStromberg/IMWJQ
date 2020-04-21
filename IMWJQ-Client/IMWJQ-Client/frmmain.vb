@@ -3,6 +3,7 @@ Imports System.IO
 
 Public Class frmmain
     Private cnf As config
+    Private cTaskPath
     Private Structure config
         Dim Prio As Diagnostics.ProcessPriorityClass
         Dim Software As List(Of executable)
@@ -29,10 +30,8 @@ Public Class frmmain
     End Structure
 
     Private Sub frmmain_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        cTaskPath = ""
         cnf = ReadConfig()
-        If System.IO.Directory.Exists(cnf.TempDir) Then
-            DelDir(cnf.TempDir)
-        End If
         System.IO.Directory.CreateDirectory(cnf.TempDir)
 
         Diagnostics.Process.GetCurrentProcess().PriorityClass = cnf.Prio
@@ -75,6 +74,7 @@ Public Class frmmain
         For Each Token In Tokens
             str = str.Replace(Token.Name, Token.Value)
         Next
+        str = str.Replace("###OUTDIR###", cnf.TempDir & "\Output")
         Return str
     End Function
 
@@ -87,6 +87,11 @@ Public Class frmmain
         Dim Parameter As String
         Dim Value As String
         Dim Job As Job
+
+        If System.IO.Directory.Exists(cnf.TempDir) Then
+            DelDir(cnf.TempDir)
+        End If
+        System.IO.Directory.CreateDirectory(cnf.TempDir)
 
         lblStatus.Text = "Copying input files"
 
@@ -116,7 +121,7 @@ Public Class frmmain
         SubFiles = System.IO.Directory.GetFiles(Job.TaskPath)
         readbuffer = ""
         For Each file In SubFiles
-            If Path.GetFileNameWithoutExtension(file) = "task" Then
+            If Path.GetFileNameWithoutExtension(file) = "Task" Then
                 If System.IO.File.Exists(cnf.TempDir & "\" & Path.GetFileName(file)) Then
                     System.IO.File.Delete(cnf.TempDir & "\" & Path.GetFileName(file))
                 End If
@@ -126,6 +131,7 @@ Public Class frmmain
                 writer = New StreamWriter(cnf.TempDir & "\" & Path.GetFileName(file))
                 writer.Write(ApplyTokens(readbuffer, cnf.Tokens))
                 writer.Close()
+                cTaskPath = cnf.TempDir & "\" & Path.GetFileName(file)
                 Exit For
             End If
         Next
@@ -142,18 +148,23 @@ Public Class frmmain
         End If
         Dim runer As New Process()
 
+        My.Computer.FileSystem.CreateDirectory(cnf.TempDir & "\Output")
+
         lblStatus.Text = "Running worker"
 
-        runer = runer.Start(apppath, Job.Arg)
+        runer = runer.Start(apppath, Job.Arg.Replace("###TaskPath###", cTaskPath))
         Try
             runer.PriorityClass = cnf.Prio
         Catch
         End Try
         runer.WaitForExit()
-        If Directory.Exists(cnf.TempDir & "\Output") Then
-            lblStatus.Text = "Copying Output files"
-            My.Computer.FileSystem.CopyDirectory(cnf.TempDir & "\Output", cnf.ServerPath & "\Output", True)
-        End If
+
+
+
+        lblStatus.Text = "Copying Output files"
+        My.Computer.FileSystem.CopyDirectory(cnf.TempDir & "\Output", cnf.ServerPath & "\Output", True)
+        writer = New StreamWriter(cnf.ServerPath & "\Done.txt")
+        writer.Close()
         lblStatus.Text = "Free"
     End Sub
 

@@ -98,9 +98,7 @@ Public Class frmmain
 
     Private Sub WriteTask(Job As Job)
         'Create empty client directories
-        If Not System.IO.Directory.Exists(My.Settings.JobDir & "\Clients\" & Job.AssigendTo) Then
-            System.IO.Directory.CreateDirectory(My.Settings.JobDir & "\Clients\" & Job.AssigendTo)
-        End If
+        System.IO.Directory.CreateDirectory(My.Settings.JobDir & "\Clients\" & Job.AssigendTo)
         If System.IO.Directory.Exists(My.Settings.JobDir & "\Clients\" & Job.AssigendTo & "\Output") Then
             If Not DelDir(My.Settings.JobDir & "\Clients\" & Job.AssigendTo & "\Output") Then
                 Exit Sub
@@ -132,6 +130,7 @@ Public Class frmmain
 
         For i = 0 To UBound(JobDirs)
             If Not System.IO.File.Exists(JobDirs(i) & "\Job.txt") Then Continue For
+            If My.Computer.FileSystem.FileExists(JobDirs(i) & "\Done.txt") Then Continue For
             Dim Reader As New System.IO.StreamReader(JobDirs(i) & "\Job.txt")
             Dim line As String
             Dim nJob As New Job
@@ -325,11 +324,13 @@ Public Class frmmain
         'Check for finished jobs
         Dim tClient As Client
         Dim i As Integer
+        Dim writer As System.IO.StreamWriter
         For i = 0 To Clients.Count - 1
             tClient = Clients(i)
             Dim tJob As Job
             Dim findex As Integer
             If System.IO.File.Exists(My.Settings.JobDir & "\Clients\" & tClient.Name & "\Done.txt") And tClient.Status = ClientStatus.Busy Then
+                System.Threading.Thread.Sleep(1000)
                 tJob = Jobs.Item(findex)
                 If My.Computer.FileSystem.DirectoryExists(tJob.Path & "\Output") Then
                     DelDir(tJob.Path & "\Output")
@@ -337,6 +338,8 @@ Public Class frmmain
                 My.Computer.FileSystem.CreateDirectory(tJob.Path & "\Output")
                 My.Computer.FileSystem.CopyDirectory(My.Settings.JobDir & "\Clients\" & tClient.Name & "\Output", tJob.Path & "\Output", True)
                 DelDir(My.Settings.JobDir & "\Clients\" & tClient.Name & "\Output")
+                writer = New IO.StreamWriter(tJob.Path & "\Done.txt")
+                writer.Close()
                 tClient.Status = ClientStatus.Free
                 findex = Jobs.FindIndex(Function(p) p.ID = tClient.JobID)
                 tJob.Status = JobStatus.Finished
