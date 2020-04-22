@@ -1,0 +1,11 @@
+C:\Users\Henrik\source\repos\IMWJQ\IMWJQ-Testapp\IMWJQ-Testapp\IMWJQ-Testapp\bin\Debug\IMWJQ-Testapp.exe.config
+C:\Users\Henrik\source\repos\IMWJQ\IMWJQ-Testapp\IMWJQ-Testapp\IMWJQ-Testapp\bin\Debug\IMWJQ-Testapp.exe
+C:\Users\Henrik\source\repos\IMWJQ\IMWJQ-Testapp\IMWJQ-Testapp\IMWJQ-Testapp\bin\Debug\IMWJQ-Testapp.pdb
+C:\Users\Henrik\source\repos\IMWJQ\IMWJQ-Testapp\IMWJQ-Testapp\IMWJQ-Testapp\bin\Debug\IMWJQ-Testapp.xml
+C:\Users\Henrik\source\repos\IMWJQ\IMWJQ-Testapp\IMWJQ-Testapp\IMWJQ-Testapp\obj\Debug\IMWJQ-Testapp.vbprojAssemblyReference.cache
+C:\Users\Henrik\source\repos\IMWJQ\IMWJQ-Testapp\IMWJQ-Testapp\IMWJQ-Testapp\obj\Debug\IMWJQ_Testapp.Resources.resources
+C:\Users\Henrik\source\repos\IMWJQ\IMWJQ-Testapp\IMWJQ-Testapp\IMWJQ-Testapp\obj\Debug\IMWJQ-Testapp.vbproj.GenerateResource.cache
+C:\Users\Henrik\source\repos\IMWJQ\IMWJQ-Testapp\IMWJQ-Testapp\IMWJQ-Testapp\obj\Debug\IMWJQ-Testapp.vbproj.CoreCompileInputs.cache
+C:\Users\Henrik\source\repos\IMWJQ\IMWJQ-Testapp\IMWJQ-Testapp\IMWJQ-Testapp\obj\Debug\IMWJQ-Testapp.exe
+C:\Users\Henrik\source\repos\IMWJQ\IMWJQ-Testapp\IMWJQ-Testapp\IMWJQ-Testapp\obj\Debug\IMWJQ-Testapp.xml
+C:\Users\Henrik\source\repos\IMWJQ\IMWJQ-Testapp\IMWJQ-Testapp\IMWJQ-Testapp\obj\Debug\IMWJQ-Testapp.pdb

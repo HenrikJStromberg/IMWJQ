@@ -75,6 +75,7 @@ Public Class frmmain
             str = str.Replace(Token.Name, Token.Value)
         Next
         str = str.Replace("###OUTDIR###", cnf.TempDir & "\Output")
+        str = str.Replace("###MACHINE_NAME###", My.Computer.Name)
         Return str
     End Function
 
