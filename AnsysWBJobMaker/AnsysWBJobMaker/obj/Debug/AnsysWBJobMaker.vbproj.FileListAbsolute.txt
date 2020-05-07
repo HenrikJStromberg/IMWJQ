@@ -1,0 +1,12 @@
+C:\Users\Henrik\source\repos\AnsysWBJobMaker\AnsysWBJobMaker\bin\Debug\AnsysWBJobMaker.exe.config
+C:\Users\Henrik\source\repos\AnsysWBJobMaker\AnsysWBJobMaker\bin\Debug\AnsysWBJobMaker.exe
+C:\Users\Henrik\source\repos\AnsysWBJobMaker\AnsysWBJobMaker\bin\Debug\AnsysWBJobMaker.pdb
+C:\Users\Henrik\source\repos\AnsysWBJobMaker\AnsysWBJobMaker\bin\Debug\AnsysWBJobMaker.xml
+C:\Users\Henrik\source\repos\AnsysWBJobMaker\AnsysWBJobMaker\obj\Debug\AnsysWBJobMaker.vbprojAssemblyReference.cache
+C:\Users\Henrik\source\repos\AnsysWBJobMaker\AnsysWBJobMaker\obj\Debug\AnsysWBJobMaker.frmMain.resources
+C:\Users\Henrik\source\repos\AnsysWBJobMaker\AnsysWBJobMaker\obj\Debug\AnsysWBJobMaker.Resources.resources
+C:\Users\Henrik\source\repos\AnsysWBJobMaker\AnsysWBJobMaker\obj\Debug\AnsysWBJobMaker.vbproj.GenerateResource.cache
+C:\Users\Henrik\source\repos\AnsysWBJobMaker\AnsysWBJobMaker\obj\Debug\AnsysWBJobMaker.vbproj.CoreCompileInputs.cache
+C:\Users\Henrik\source\repos\AnsysWBJobMaker\AnsysWBJobMaker\obj\Debug\AnsysWBJobMaker.exe
+C:\Users\Henrik\source\repos\AnsysWBJobMaker\AnsysWBJobMaker\obj\Debug\AnsysWBJobMaker.xml
+C:\Users\Henrik\source\repos\AnsysWBJobMaker\AnsysWBJobMaker\obj\Debug\AnsysWBJobMaker.pdb

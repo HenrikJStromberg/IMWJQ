@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28010.2016
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "AnsysWBJobMaker", "AnsysWBJobMaker\AnsysWBJobMaker.vbproj", "{DCA86DC7-EE8E-4380-AE2F-ED2F81B95829}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DCA86DC7-EE8E-4380-AE2F-ED2F81B95829}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCA86DC7-EE8E-4380-AE2F-ED2F81B95829}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DCA86DC7-EE8E-4380-AE2F-ED2F81B95829}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DCA86DC7-EE8E-4380-AE2F-ED2F81B95829}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F89B8505-EDBD-44BE-A390-74DD0CB8F548}
+	EndGlobalSection
+EndGlobal
