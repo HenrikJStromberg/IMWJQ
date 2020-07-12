@@ -286,7 +286,7 @@ Public Class frmmain
                 End If
             End If
         Next
-        Return Res
+        Return res
     End Function
 
     Private Function DelDir(Path As String) As Boolean

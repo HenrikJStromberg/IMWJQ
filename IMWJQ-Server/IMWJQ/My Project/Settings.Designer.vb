@@ -54,13 +54,16 @@ Namespace My
             End Get
         End Property
         
-        <Global.System.Configuration.ApplicationScopedSettingAttribute(),  _
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
          Global.System.Configuration.DefaultSettingValueAttribute("C:\Desktop\TestDir")>  _
-        Public ReadOnly Property JobDir() As String
+        Public Property JobDir() As String
             Get
                 Return CType(Me("JobDir"),String)
             End Get
+            Set
+                Me("JobDir") = value
+            End Set
         End Property
     End Class
 End Namespace

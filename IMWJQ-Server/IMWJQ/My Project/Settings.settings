@@ -2,7 +2,7 @@
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="My" GeneratedClassName="MySettings" UseMySettingsClassName="true">
   <Profiles />
   <Settings>
-    <Setting Name="JobDir" Type="System.String" Scope="Application">
+    <Setting Name="JobDir" Type="System.String" Scope="User">
       <Value Profile="(Default)">C:\Desktop\TestDir</Value>
     </Setting>
   </Settings>
